@@ -1,1 +1,293 @@
+## Random Forest
+
+#Using Boston housing data from [https://www.cs.toronto.edu/\~delve/data/boston/bostonDetail.html](#0){.uri}
+
+#Each record in the dataset describes a Boston suburb or town. The data was drawn from the Boston Standard Metropolitan Statistical Area (SMSA) in 1970.
+
+### Step 1: Load the Dataset
+
+#Begin by loading the Boston Housing dataset from the `MASS` package.
+
+# Install MASS package if not already installed
+install.packages("MASS")
+
+# Load the required package
+library(MASS)
+
+# Look at the details of the dataset
+?Boston
+
+# Load the dataset
+data = Boston
+
+# View the summary of the dataset
+summary(data)
+
+### Step 2: Explore Dataset Characteristics
+
+##Generate boxplots for each variable using the packages below
+
+library(RColorBrewer)
+colors = colorRampPalette(brewer.pal(12, "Set3"))(length(names(data)))  # Expands Set3 palette to match the number of variables
+
+par(mfrow = c(3, 5), mar = c(1, 2, 2, 1))  # Arranges plots in a 3x5 grid to fit all variables
+for (i in seq_along(names(data))) {
+  boxplot(data[[i]], main = names(data)[i], col = colors[i], border = "darkgray", ylab = "")
+} # Loops through each variable, plotting with a unique colo
+
+# Reset plotting layout
+par(mfrow = c(1, 1))
+
+#Create histograms with kernel density for each variable - Using Kernal density overlays show the density and shape of variables, which is useful for checking assumptions of normality in  exploratory data analysis, risidual diagnostics and transformation decisions. The histogram shows the data in bins, while the kernel density line estimates the underlying probability distribution continuously.
+#Note: Histograms are highly sensitive to bin numbers - too few bins can oversimplify data and too many can introduce unnecessary noise and confuse patterns. Use histograms when you need a straightforward, discrete representation of data or when working with very large datasets.
+
+##```{python}
+#import numpy as np
+#import matplotlib.pyplot as plt
+#data = np.random.normal(0, 1, 1000) # Generate sample data
+#plt.hist(data, bins=20, density=True, alpha=0.7)
+#plt.title("Histogram")
+#plt.xlabel("Value")
+#plt.ylabel("Density")
+#plt.show()
+#```
+# Set up a grid layout with adjusted margins
+par(mfrow = c(3, 5), mar = c(2, 2, 2, 1))  # Adjust layout as needed
+
+# Create histograms for each variable
+lapply(names(data), function(var) {
+  hist(data[[var]],
+       main = var, 
+       xlab = "", 
+       ylab = "", 
+       col = "lightblue", 
+       border = "white",
+       probability = TRUE
+    )  # Set probability = TRUE to scale histogram for density
+  lines(
+    density(data[[var]]), 
+    col = "red",
+    lwd = 2  # Overlay density line
+    ) 
+})
+
+
+# Reset layout
+par(mfrow = c(1, 1))
+```
+
+#Plot the correlation heatmap
+
+#install.packages("corrplot")
+library(corrplot)
+
+# Calculate correlation matrix
+correlation_matrix = cor(Boston)
+
+# Plot the correlation heatmap
+# Play around with different options for the method parameter...
+corrplot(
+  correlation_matrix, 
+  method = "ellipse", #circle =, 
+  type = "upper", 
+  tl.col = "black",
+  tl.srt = 45, 
+  addCoef.col = "black", 
+  number.cex = 0.6,
+         col = colorRampPalette(c("blue", "white", "red"))(200)
+)
+
+
+### Step 2: Install and Load Required Packages for random forest
+
+```{r}
+# Load the randomForest package
+library(randomForest)
+#randomly bags
+
+### Step 4: Train the Random Forest Model
+
+#Train the random forest model to predict `medv` based on all the other features.
+
+# Train the model
+set.seed(123)  # for reproducibility
+rf_model = randomForest(medv ~ ., data = data, ntree = 500, importance = TRUE)
+#can also omit ntree, and it will decide for you and that's the number of decision trees
+#importance = TRUE means I am interested in looking at variable importance after run. Random Forest tells you how important each variable is.
+# View model summary
+print(rf_model)
+
+### Step 5: Interpret Feature Importance
+
+#Random forest provides a measure of feature importance, showing how much each variable contributes to predictions. 
+#  - purity - goes into a node and splits based on some criteria like #rooms = 2 
+
+#-   Which variables appear to have the highest importance?
+      
+
+#-   How could variables like `lstat` (percent lower status of the population) or `rm` (average number of rooms) intuitively impact housing prices? 
+
+# Extract and plot feature importance
+importance = importance(rf_model)
+varImpPlot(rf_model)
+
+### 1. **%IncMSE (Percent Increase in Mean Squared Error)**
+
+#-   **What It Means**: `%IncMSE` represents the increase in prediction error (Mean Squared Error) when the values of a specific predictor are randomly permuted while all other variables remain the same. This method is often called "permutation importance."
+ ##How does inc Error of one predictor impact MSE of model?
+
+#-   **How It Works**: For each feature, the algorithm shuffles the values in that column, making the feature less informative. It then recalculates the model's prediction error with this "broken" feature.
+
+#-   **Interpretation**: If the `%IncMSE` for a feature is high, it means that the feature is important for making accurate predictions—its absence or scrambling has a significant negative impact on the model’s accuracy. Conversely, a low `%IncMSE` suggests the feature has minimal impact on the model’s predictive power.
+            ## number of rooms and lstat highly positively correlated
+            ## have a multiple linear model, and one same marginal increase in predictor. 10-12 #same change in lstat as in
+        ### rf doesn't assume constant relationship, partial dependence
+
+### 2. **IncNodePurity (Increase in Node Purity)**
+
+#-   **What It Means**: `IncNodePurity` measures the total decrease in node impurities across all trees in the forest due to each feature. For regression, node impurity is often calculated using variance reduction, while for classification, it might be based on Gini impurity or entropy.
+
+#-   **How It Works**: Every time a feature is used to split a node, it reduces the impurity (or disorder) within that node by creating a more homogeneous group. `IncNodePurity` aggregates the impurity reductions each feature contributes across all trees in the random forest.
+
+#-   **Interpretation**: Features with a higher `IncNodePurity` have a stronger influence on creating splits that reduce variance in the target variable. A high `IncNodePurity` indicates that the feature plays a significant role in improving the model’s structure, while a low value means it’s less useful in splitting nodes effectively.
+
+### Which Metric to Focus On
+
+#-   **For Interpretability**: `%IncMSE` is often more interpretable, as it directly relates to how much the feature influences prediction accuracy.
+
+#-   **For Structure**: `IncNodePurity` can offer insight into the structural importance of features within the trees but might be less directly tied to prediction accuracy.
+
+### Step 6: Generate Predictions and Evaluate Model Performance
+
+#Generate predictions and evaluate model performance, using mean squared error (MSE) as an example metric.
+
+
+# Generate predictions. Scatterplot with observed vs. predicted values
+predictions = predict(rf_model, data)
+#trained on ENTIRE dataset, then applying to model that has already seen, already built decision trees based on it.
+
+# Calculate Mean Squared Error
+mse = mean((data$medv - predictions)^2)
+print(paste("Mean Squared Error:", round(mse, 2)))
+
+#MSE: 2.02
+
+#out of bag - leave one out, model training
+
+
+# Generate predictions using the random forest model
+predictions = predict(rf_model, Boston)
+observed = Boston$medv  # Actual observed values
+
+# Create the plot
+plot(observed, predictions, 
+     main = "Predicted vs. Observed Housing Prices",
+     xlab = "Observed MEDV", 
+     ylab = "Predicted MEDV", 
+     pch = 16, 
+     col = rgb(0.2, 0.4, 0.6, 0.7))
+
+# Add a reference line for a perfect fit
+abline(0, 1, col = "red", lwd = 2, lty = 2)
+
+#At 50, notice the observed values are increasingly dispairate from the predicted Medv - it's artificially been cut off at 50 so distribution drops off and then jumps up around 50.
+
+data[data$medv>46,] #prints all rows and columns where > 46, only a couple in there that are not 50. 
+nrow(data[data$medv>46,]) 
+
+####only a couple in there that are not 50, which doesn't seem very likely, so it's probably censored at 50, leading to issues with predictability. for observations exactly 50, the model didn't predict any of them to be exactly 50, so the prediction  of the higher values is not as good.
+
+### Step 7: Use Partial Dependence Plots
+
+#Partial dependence plots (PDP) can illustrate how certain variables affect predictions. Here’s an example with the `pdp` package:
+
+```{r}
+# Install and load pdp package
+#install.packages("pdp")
+library(pdp)
+
+# Create a partial dependence plot
+var = "nox"
+pdp_lstat = partial(rf_model, pred.var = var)
+plotPartial(pdp_lstat, lwd = 2, main = paste0("Partial Dependence of MEDV on ", var))
+
+var = "dis" # lstat, dis & rm  also looked at in class.
+pdp_lstat = partial(rf_model, pred.var = var)
+plotPartial(pdp_lstat, lwd = 2, main = paste0("Partial Dependence of MEDV on ", var), rug=T, train=data)
+#the rug is what gives the tick marks to interpret pdp's further
+#lstat has a lot more spread/data/variation of the predictor
+
+#looking at the pdp, it's --super close, think maybe penthouses in NYC, then  decrease for poor public housing, then inc again for suburbs, and then decrease when ruralness not good. only 30% of it is actually positive/increasing. 
+#Exponential change - s-curve shape, logarithmic? all of the effect captured between 6 & 8, the small tick marks on rm axis show percentiles. (dont have a ton of data below 5.7, or above 7.2.  80% of data falls between that middle range for the predictor rm
+
+### Data Partitioning
+
+#If we are using a larger dataset, we would want to split our data into training and testing data to see how well our model performs with data it hasn't been trained on.
+
+#some portion train, some portion test. How well does your model predict data it's never seen. 20-30% testing so 70-80% for training.
+
+```{r}
+## 75% of the sample size
+smp_size <- floor(0.75 * nrow(data)) #floor tells to round down to nearest whole number. 
+
+## set the seed to make your partition reproducible
+set.seed(123)
+train_ind <- sample(seq_len(nrow(data)), size = smp_size) 
+
+train <- data[train_ind, ]
+test <- data[-train_ind, ] #all that are NOT in train_ind
+
+#dim(train) to make sure correct
+#dim(test)
+
+
+#Then rerun our model...
+
+
+rf_model = randomForest(medv ~ ., data = train, ntree = 500, importance = TRUE)
+#now tell only want to train on the 75%, using the random data partitioned for our 
+
+# View model summary
+print(rf_model)
+
+#split as in the split in the decision trees?
+#For our predictions, we'll use the testing data...
+
+# Generate predictions
+predictions = predict(rf_model, test) 
+
+# Calculate Mean Squared Error
+mse = mean((test$medv - predictions)^2)
+print(paste("Mean Squared Error:", round(mse, 2)))
+```
+#MSE increased to 12.84! so a lot worse at predicting values it hasn't seen before.
+#And plot predicted vs. observed
+
+
+# Generate predictions using the random forest model
+predictions = predict(rf_model, test)
+observed = test$medv  # Actual observed values
+
+# Create the plot
+plot(observed, predictions, 
+     main = "Predicted vs. Observed Housing Prices",
+     xlab = "Observed MEDV", 
+     ylab = "Predicted MEDV", 
+     pch = 16, 
+     col = rgb(0.2, 0.4, 0.6, 0.7))
+
+# Add a reference line for a perfect fit
+abline(0, 1, col = "red", lwd = 2, lty = 2)
+
+#See that in the plot above, a lot more spread from the line. overpredicted even worse.OVERFIT model when give full dataset.
+
+#Partial dependence plots have a lot going on and are more difficult to interpret. 
+
+### Discussion Points
+
+#1.  **Feature Importance**: Talk through which features are most influential and why.
+
+#2.  **Predictions**: Compare predicted vs. actual `medv` values to discuss model accuracy.
+
+#3.  **Partial Dependence**: For selected features, discuss the relationship shown in PDPs and connect it back to real-world understanding.
 
