@@ -61,17 +61,7 @@ Because the probability is > 50% ( about 51.43%) it's a winning wager to bet on 
 
 #### **Interest Rate Modeling (20 points)**
 
-Suppose an investor wants to simulate the potential future values of an investment with compounding interest. Set up a Monte Carlo simulation where the annual return on the investment is normally distributed with a mean of 6% and a standard deviation of 10%. Simulate the investment's value after 10 years if the initial amount is \$10,000. What is the probability that the investment will be worth more than \$20,000 after 10 years?
-```{r}
-```
-
-
-```{r}
-```
-
-
-```{r}
-```
+Suppose an investor wants to simulate the potential future values of an investment with compounding interest. Set up a Monte Carlo simulation where the annual return on the investment is normally distributed with a mean of 6% and a standard deviation of 10%. Simulate the investment's value after 10 years if the initial amount is \$10,000. What is the probability that the investment will be worth more than \$20,000 after 10 years
 
 ```{r}
 set.seed(123)  
