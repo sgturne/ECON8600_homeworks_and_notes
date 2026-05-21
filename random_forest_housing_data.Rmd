@@ -41,7 +41,7 @@ par(mfrow = c(1, 1))
 #Create histograms with kernel density for each variable - Using Kernal density overlays show the density and shape of variables, which is useful for checking assumptions of normality in  exploratory data analysis, risidual diagnostics and transformation decisions. The histogram shows the data in bins, while the kernel density line estimates the underlying probability distribution continuously.
 #Note: Histograms are highly sensitive to bin numbers - too few bins can oversimplify data and too many can introduce unnecessary noise and confuse patterns. Use histograms when you need a straightforward, discrete representation of data or when working with very large datasets.
 
-##```{python}
+## {python}
 #import numpy as np
 #import matplotlib.pyplot as plt
 #data = np.random.normal(0, 1, 1000) # Generate sample data
@@ -50,7 +50,7 @@ par(mfrow = c(1, 1))
 #plt.xlabel("Value")
 #plt.ylabel("Density")
 #plt.show()
-#```
+# 
 # Set up a grid layout with adjusted margins
 par(mfrow = c(3, 5), mar = c(2, 2, 2, 1))  # Adjust layout as needed
 
@@ -74,7 +74,7 @@ lapply(names(data), function(var) {
 
 # Reset layout
 par(mfrow = c(1, 1))
-```
+ 
 
 #Plot the correlation heatmap
 
@@ -100,7 +100,6 @@ corrplot(
 
 ### Step 2: Install and Load Required Packages for random forest
 
-```{r}
 # Load the randomForest package
 library(randomForest)
 #randomly bags
@@ -201,7 +200,7 @@ nrow(data[data$medv>46,])
 
 #Partial dependence plots (PDP) can illustrate how certain variables affect predictions. Here’s an example with the `pdp` package:
 
-```{r}
+  
 # Install and load pdp package
 #install.packages("pdp")
 library(pdp)
@@ -226,7 +225,7 @@ plotPartial(pdp_lstat, lwd = 2, main = paste0("Partial Dependence of MEDV on ", 
 
 #some portion train, some portion test. How well does your model predict data it's never seen. 20-30% testing so 70-80% for training.
 
-```{r}
+  
 ## 75% of the sample size
 smp_size <- floor(0.75 * nrow(data)) #floor tells to round down to nearest whole number. 
 
@@ -259,7 +258,7 @@ predictions = predict(rf_model, test)
 # Calculate Mean Squared Error
 mse = mean((test$medv - predictions)^2)
 print(paste("Mean Squared Error:", round(mse, 2)))
-```
+ 
 #MSE increased to 12.84! so a lot worse at predicting values it hasn't seen before.
 #And plot predicted vs. observed
 
