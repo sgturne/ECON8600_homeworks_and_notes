@@ -1,0 +1,248 @@
+## Plotting FRED Data and web scraping
+
+### Eamon Espey
+
+#### 9/19/24
+
+To start, let's download consumer price index data from the Federal Reserve. Download all months available and make a plot with axis labels and a title
+
+```{r}
+# read in the data
+path = 'U:/Documents/econ8600/9-17-24/'
+cpi = read.csv(paste0(path, "MEDCPIM158SFRBCLE.csv"))
+
+# change the date column to a date object
+cpi$DATE = as.Date(cpi$DATE)
+
+# make a plot of the data with axis labels and a title
+plot_cpi = function() {plot(cpi$DATE, cpi$MEDCPIM158SFRBCLE, type='l', col='darkgray', xlab='', ylab='Percent Change at Annual Rate', main='Median Consumer Price Index')}
+plot_cpi()
+```
+
+Add a shaded region for recessions (July 1990 - March 1991, March 2001 - November 2001, December 2007 - June 2009, February 2020 - April 2020)
+
+```{r}
+plot_cpi()
+#par("usr")
+# par("usr") gives us a vector of extreme values of plotting region in the order c(x1, x2, y1, y2) 
+shade_rec = function(x1, x2) {
+  rect(as.Date(x1), par("usr")[3], as.Date(x2), par("usr")[4], col = "#f7f7f7", border=NA)
+  par(new=T)
+}
+
+plot_cpi_w_recessions = function() {
+  plot_cpi()
+  shade_rec("1990-7-1", "1991-3-1")
+  shade_rec("2001-3-1", "2001-11-1")
+  shade_rec("2007-12-1", "2009-6-1")
+  shade_rec("2020-2-1", "2020-4-1")
+  plot_cpi()
+}
+plot_cpi_w_recessions()
+```
+
+Add
+
+```{r}
+
+# make a plot of the data
+plot_cpi_w_recessions()
+
+# plot months with less than 2% inflation in green
+under2 = cpi
+under2$MEDCPIM158SFRBCLE[under2$MEDCPIM158SFRBCLE>2] = 2
+lines(under2$DATE, under2$MEDCPIM158SFRBCLE, col='green3')
+abline(2, 0, col='green3')
+
+# plot months with greater than 4% inflation in green
+over4 = cpi
+over4$MEDCPIM158SFRBCLE[over4$MEDCPIM158SFRBCLE<4] = 4
+lines(over4$DATE, over4$MEDCPIM158SFRBCLE, col='red2')
+abline(4, 0, col='red2')
+
+# add a line for the overall mean inflation rate
+abline(mean(cpi$MEDCPIM158SFRBCLE), 0)
+
+# add a legend
+legend('topleft', legend=c("greater than 4% inflation", "long-term average inflation", "less than 2% inflation"), lty=1, col=c("red2", "black", "green3"), cex=0.8)
+```
+
+## Using the FRED API in R
+
+First, create an account: https://fredaccount.stlouisfed.org/login/secure/
+
+Go to your API Keys page
+
+Request an API Key - for the description, I put "R scripts for accessing datasets"
+
+Copy your API Key to a .txt file on your computer
+
+Load the fredr library and set up your API Key
+
+```{r}
+library(fredr)
+
+# path to your API Key
+API_Key_path = "C:/Users/sgtur/OneDrive/Documents/FRED API KEY.txt"
+# read the text file in which your API Key is stored
+key = readLines(API_Key_path)
+
+# set your API Key with fredr
+fredr_set_key(key)
+```
+
+Recreate the cpi plots from before using the API:
+
+```{r}
+cpi = fredr(series_id = "MEDCPIM158SFRBCLE")
+
+# make the column name match from the csv so the plot functions will still work...
+names(cpi)[1] = "DATE"
+names(cpi)[3] = "MEDCPIM158SFRBCLE"
+
+# change the date column to a date object
+cpi$DATE = as.Date(cpi$DATE)
+
+# generate the plot
+plot_cpi_w_recessions()
+```
+
+Recreate this plot:
+
+![](images/clipboard-1197842575.png)
+
+```{r}
+# get GDP data from FRED
+gdp_data <- na.omit(fredr(series_id = "GDP"))
+
+
+# look at the first few rows
+head(gdp_data)
+
+# format date column
+gdp_data$date = as.Date(gdp_data$date)
+
+# make function to plot gdp
+plot_gdp = function(){
+  plot(gdp_data$date, gdp_data$value, type='l', ylab="Billions of Dollars", xlab="", main="US Gross Domestic Product", col='darkblue', lwd=2)
+}
+
+plot_gdp_w_recessions = function() {
+  plot_gdp()
+  shade_rec("1929-8-01", "1933-3-01")
+  shade_rec("1937-5-01", "1938-6-01")
+  shade_rec("1945-2-01", "1945-10-01")
+  shade_rec("1948-11-01", "1949-10-01")
+  shade_rec("1953-7-01", "1954-5-01")
+  shade_rec("1957-8-01", "1958-4-01")
+  shade_rec("1960-4-01", "1961-2-01")
+  shade_rec("1969-12-01", "1970-11-01")
+  shade_rec("1973-11-01", "1975-3-01")
+  shade_rec("1980-1-01", "1980-7-01")
+  shade_rec("1981-7-01", "1982-11-01")
+  shade_rec("1990-7-1", "1991-3-1")
+  shade_rec("2001-3-1", "2001-11-1")
+  shade_rec("2007-12-1", "2009-6-1")
+  shade_rec("2020-2-1", "2020-4-1")
+  plot_gdp()
+}
+plot_gdp_w_recessions()
+```
+
+
+TO GET TABLES OFF OF WEBSITES
+- if webscraping more than robots.txt ask. zB Zillow is really strict 
+    - robots 
+```{r}
+# Load necessary libraries
+library(rvest)
+
+# URL of the Wikipedia page
+url <- "https://en.wikipedia.org/wiki/Clemson_Tigers_football"
+
+# Read the HTML of the page
+page <- read_html(url)
+
+# Extract all tables from the page
+tables <- html_table(page, fill = TRUE)
+
+# View a table
+head(tables[[4]])
+dim(tables[[4]]) #Dimensions
+
+conf_champs = tables[[4]]
+
+# how many conference championships did Danny Ford win?
+print(paste("Danny Ford won", nrow(conf_champs[conf_champs$Coach=="Danny Ford",]), "conference championships."))
+
+# In which years did Danny Ford win the conference championship?
+conf_champs$Year[conf_champs$Coach=="Danny Ford"]
+```
+
+What is the average rating for the item linked below? How many reviews are there?
+
+```{r}
+
+# URL of the Wikipedia page
+url <- "https://www.amazon.com/Web-Scraping-Python-Collecting-Modern/dp/1491985577"
+urltutorial <- "https://cran.r-project.org/web//packages/stringr/vignettes/regular-expressions.html"
+
+# Read the HTML of the page
+page <- read_html(url)
+pagetutorial <- read_html(urltutorial)
+# Extract all text from the page INSTEAD of tables, text2
+text = html_text2(page) 
+
+# Write the text to a .txt file for easier inspection
+write.table(text, "review.txt")
+
+# load the stringr library for string extraction
+library(stringr)
+
+# extract the average rating  searching for specific object within the page. Regular expressions in r
+rating = str_extract(text, pattern="[12345][\\.]?[:digit:]? out of 5 stars") #the \\ tell us to get
+
+#Characters are anything including those in square bracket regardless of order or if one or the other str_extract(x,C[LX]) gives #> [1] "CLXXX"
+
+#If \ is used as an escape character in regular expressions, how do you match a literal \? Well you need to escape it, creating the regular expression \\. To create that regular expression, you need to use a string, which also needs to escape \. That means to match a literal \ you need to write "\\\\" — you need four backslashes to match one!
+#parse_number - finds the first number in a string
+
+print(rating) 
+
+# extract the number of reviews
+num_reviews = str_extract(text, pattern="[:digit:]* ratings") #any number of digits that follows the _ ratings, *will only return first instance
+#num_reviews = str_extract(text, pattern = "out of 5 stars [:digit:]*) Asterisk gives you any number after that sentence any number of d
+print(num_reviews)
+
+library(readr)
+parse_number(rating)
+parse_number(num_reviews)
+```
+\\\\ tells R: I want to search for 2 actual backslashes
+Find the ages of the past five presidents:
+
+```{r}
+get_age = function(url) {
+  page <- read_html(url)
+  text = html_text2(page)
+  age = parse_number(str_extract(text, pattern="\\(age [:digit:]{2,}*\\)")) #find patterns want to use on the website to get formatting.
+} #squiggly bracket for at least 2.
+
+path = "https://en.wikipedia.org/wiki/"
+presidents = c("Joe_Biden", "Donald_Trump", "Barack_Obama", "George_W._Bush", "Bill_Clinton")
+
+# method 1...
+ages = numeric(length(presidents))
+
+for (i in 1:length(presidents)) {
+  ages[i] = get_age(paste0(path, presidents[i]))
+}
+
+pres_ages1 = data.frame(President = presidents, Age = ages)
+print(pres_ages1)
+
+#paste0 smooshes 2 strings together without spaces
+# method 2... (faster)
+pres_ages2 = data.frame(President = presidents, Age = unlist(lapply(paste0(path, presidents), get_age)))
+print(pres_ages2)
+```
