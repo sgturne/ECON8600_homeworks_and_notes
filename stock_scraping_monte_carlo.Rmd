@@ -1,0 +1,303 @@
+
+Starting with stock history scraping
+```{r}
+# Load required libraries
+library(httr)
+library(rvest)
+library(stringr)
+library(dplyr)
+
+get_stock_history = function(ticker, start_time = 1) {
+  # Convert to Unix time
+  current_unix_time <- as.integer(as.POSIXct(Sys.time(), origin="1970-01-01"))
+  
+  base_url = "https://finance.yahoo.com/quote/"
+  url = paste0(base_url, ticker, "/history/?period1=1&period2=", current_unix_time)
+  
+  # Set user agent and make the GET request
+  response <- GET(url, add_headers("User-Agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    "Accept" = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "Referer" = "https://finance.yahoo.com/",
+    "Accept-Language" = "en-US,en;q=0.5",
+    "Connection" = "keep-alive"))
+  
+  # Check response status
+  if (http_status(response)$category == "Success") {
+      # Read the content of the response
+      page <- content(response, "text")
+      
+      # Parse the HTML content
+      parsed_page <- read_html(page)
+  
+      # Check the structure of the parsed page to find the correct table
+      # You can print the HTML content to debug if needed
+      # print(parsed_page)
+  
+      # Attempt to extract the historical prices table
+      data_table <- html_table(html_nodes(parsed_page, "table")[[1]])
+  
+      # Check if the table was extracted
+      if (!is.null(data_table)) {
+          # Clean the table (if necessary)
+          cleaned_data <- rename(data_table,
+                                 "Close" = "Close          Close price adjusted for splits.",
+                                 'Adj_close' = 'Adj Close          Adjusted close price adjusted for splits and dividend and/or capital gain distributions.')
+          cleaned_data = mutate(cleaned_data, Date = as.Date(Date, format = "%b %d, %Y"))
+          cleaned_data$Volume = str_replace_all(cleaned_data$Volume, ",", "")
+          cleaned_data[,-1] = apply(cleaned_data[,-1], 2, as.numeric)
+  
+          # Return the cleaned data
+          return(cleaned_data)
+      } else {
+          print("Table extraction failed. No data found.")
+      }
+  } else {
+      print(http_status(response))
+  }
+}
+
+```
+
+```{r}
+# get stock history for Microsoft...
+MSFT = na.omit(get_stock_history('MSFT'))
+
+# calculate daily change (absolute and percent)
+MSFT$Daily_change = MSFT$Close - MSFT$Open
+MSFT$Daily_pct_change = MSFT$Daily_change/MSFT$Open
+
+# plot closing price over time
+plot(MSFT$Date, MSFT$Close, type='l')
+```
+
+
+Monte Carlo example from previous lecture
+
+```{r}
+# random walk to calculate theoretical stock price after ndays
+# 1. Pick a space of possible samples (domain).
+random_walk = function(start_price, days, mean, sd) {
+  price = start_price * (1 + rnorm(1, mean, sd))
+  for (i in 1:(days)) {
+    price = price * (1  + rnorm(1, mean, sd))
+  }
+  return(price)
+}
+
+stock_monte_carlo = function(numTrials, starting_price, ndays, mean, sd) {
+  count_increase = 0
+  for (i in 1:numTrials) {
+    # 2. Randomly sample in that space using a probability distribution.
+    new_stock_price = random_walk(starting_price, ndays, mean, sd)
+    
+    # 3. Perform defined operations on the random samples.
+    if (new_stock_price>starting_price) {
+      # 4. Aggregate the data.
+      count_increase = count_increase + 1
+    }
+  }
+  # return percent of trials that meet our criteria (new_stock_price>starting_price)
+  return(count_increase/numTrials)
+}
+
+# set parameter values
+starting_price = 100
+ndays = 30
+mean = 0.001
+sd = 0.005
+
+# run simulation 1,000 times...
+stock_monte_carlo(1000, starting_price, ndays, mean, sd)
+```
+
+We'll need to change the probability distribution we're sampling from...
+
+We can look at a normal distribution plotted over the histogram of daily percent changes:
+
+```{r}
+# Generate your data
+x_data = seq(-0.1, 0.1, by = 0.001)
+
+# Create a histogram
+hist(MSFT$Daily_pct_change, 
+     freq = FALSE, 
+     breaks = 100,  # number of breaks
+     xlim = range(x_data),
+     col = "lightblue",  # Histogram fill color
+     border = "black",    # Border color for the histogram
+     main = "Histogram of Daily Percentage Change",  # Main title
+     xlab = "Daily Percentage Change",  # X-axis label
+     ylab = "Density")  # Y-axis label
+
+# Add normal distribution line
+dnorm_values = dnorm(x_data, mean = mean(MSFT$Daily_pct_change), sd = sd(MSFT$Daily_pct_change))
+lines(x_data, dnorm_values, col = "red", lwd = 2)
+
+```
+
+That's pretty close, but it doesn't match perfectly.
+What if we fudge the standard deviation?
+```{r}
+# Create a histogram
+hist(MSFT$Daily_pct_change, 
+     freq = FALSE, 
+     breaks = 100,  # number of breaks
+     xlim = range(x_data),
+     col = "lightblue",  # Histogram fill color
+     border = "black",    # Border color for the histogram
+     main = "Histogram of Daily Percentage Change",  # Main title
+     xlab = "Daily Percentage Change",  # X-axis label
+     ylab = "Density")  # Y-axis label
+
+# Add normal distribution line
+dnorm_values = dnorm(x_data, mean = mean(MSFT$Daily_pct_change), sd = 0.014)
+lines(x_data, dnorm_values, col = "red", lwd = 2)
+```
+
+Still not perfect and we're manipulating the data a bit if we use a distribution like this.
+
+Thankfully, we can plot the probability distribution of our data!
+```{r}
+dens = density(MSFT$Daily_pct_change)
+
+# Create a histogram
+hist(MSFT$Daily_pct_change, 
+     freq = FALSE, 
+     breaks = 100,  # number of breaks -- What are breaks?
+     xlim = range(x_data),
+     col = "lightblue",  # Histogram fill color
+     border = "black",    # Border color for the histogram
+     main = "Density Plot of Daily Percentage Change",  # Main title
+     xlab = "Daily Percentage Change",  # X-axis label
+     ylab = "Density")  # Y-axis label
+
+# plot density function
+lines(dens, col='red', lwd=2)
+
+```
+
+And we can sample values directly from the probability distribution of our data
+```{r}
+# Draw random values based on the density
+# Use the density values as weights
+n_samples <- 100  # Specify how many samples you want to draw
+sampled_values <- sample(dens$x, size = n_samples, prob = dens$y, replace = TRUE)
+
+# Plot the density and the sampled values
+plot(dens, main = "Density Plot with Sampled Values", xlim = range(x_data), xlab = "Value", ylab = "Density", col = "red")
+points(sampled_values, rep(0, length(sampled_values)), col = rgb(0,0,1,.1), pch = 16, cex = 1)  # Overlay sampled values
+
+```
+
+Now we can update the probability distribution from which we're sampling for our random walk simulation
+```{r}
+# random walk to calculate theoretical stock price after ndays
+# 1. Pick a space of possible samples (domain).
+random_walk = function(start_price, ndays, dens) {
+  price = start_price * (1 + sample(dens$x, 1, prob = dens$y))
+  for (i in 1:(ndays)) {
+    price = price * (1  + sample(dens$x, 1, prob = dens$y))
+  }
+  return(price)
+}
+
+stock_monte_carlo = function(numTrials, starting_price, ndays, density) {
+  count_increase = 0
+  for (i in 1:numTrials) {
+    # 2. Randomly sample in that space using a probability distribution.
+    new_stock_price = random_walk(starting_price, ndays, density)
+    
+    # 3. Perform defined operations on the random samples.
+    if (new_stock_price>starting_price) {
+      # 4. Aggregate the data.
+      count_increase = count_increase + 1
+    }
+  }
+  # return percent of trials that meet our criteria (new_stock_price>starting_price)
+  return(count_increase/numTrials)
+}
+
+# set parameter values
+starting_price = 100
+ndays = 30
+density = density(MSFT$Daily_pct_change)
+
+# run simulation 1,000 times...
+stock_monte_carlo(1000, starting_price, ndays, density)
+```
+
+plot results against ndays
+
+```{r}
+ndays = 1:100
+numTrials = 100
+sim_results = unlist(lapply(ndays, function(x){stock_monte_carlo(numTrials, starting_price, x, density)}))
+
+plot(ndays, sim_results, 
+     type = 'l', 
+     col = "black", 
+     lwd = 2, 
+     main = "Monte Carlo Simulation of Stock Prices",
+     xlab = "Days", 
+     ylab = "Probability of price increase", 
+     #ylim = range(sim_results, na.rm = TRUE),  # Adjust y-axis limits based on data
+     ylim = c(0,1),
+     las = 1)  # Set axis labels to be horizontal
+
+# add trendline
+trend = lm(sim_results ~ ndays)$coefficients
+abline(trend[1], trend[2], col="blue", lwd=2)
+
+# add coin flip line...
+abline(.5,0,col='red', lwd=2)
+
+# add legend
+legend('bottomright', legend=c("Simulation results", paste0("Trend (", round(trend[2],6), ")"), "50/50 line"), lty=1, lwd=2, col=c("black", "blue", "red"))
+```
+
+
+Simulate based on all data from the month of November (in any year)
+```{r}
+library(lubridate)
+
+stock_monte_carlo(1000, starting_price, ndays=30, density(MSFT$Daily_pct_change[month(MSFT$Date) == 11]))
+
+```
+
+
+Plot simulation results for each calendar month
+```{r}
+numTrials = 200 # number of Monte Carlo trials for each month
+monthly_results = unlist(lapply(1:12, function(x) {stock_monte_carlo(numTrials, starting_price, ndays=30, density(MSFT$Daily_pct_change[month(MSFT$Date) == x]))}))
+
+
+plot(1:12, monthly_results, type='l')
+```
+
+
+generate 100 sets of monthly results for 100 iterations each of our monte carlo function
+```{r}
+nrows = 100
+numTrials = 100
+ndays = 30
+
+monthly_results = unlist(lapply(1:12, function(x) {stock_monte_carlo(numTrials, starting_price, ndays, density(MSFT$Daily_pct_change[month(MSFT$Date) == x]))}))
+
+for (i in 2:nrows) {
+  monthly_results = rbind(monthly_results, unlist(lapply(1:12, function(x) {stock_monte_carlo(numTrials, starting_price, ndays, density(MSFT$Daily_pct_change[month(MSFT$Date) == x]))})))
+}
+
+matplot(1:12, t(monthly_results), type='l', col=rgb(1, 0, 0, 0.2))
+```
+
+```{r}
+colnames(monthly_results) <- month.abb
+
+boxplot(monthly_results, 
+        main = "Boxplots of Monthly Data", 
+        xlab = "Months", 
+        ylab = "Values", 
+        col = "lightblue", 
+        border = "black")
+abline(.5,0, lwd=2, col='darkred')
+```

@@ -1,0 +1,282 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+## Econ 8600 - Homework 3
+
+#### Due EOD 11/19/24
+
+#### {Sarah Grace Turner}
+
+
+#### **Pascal's double sixes with a weighted die (15 points)**
+
+Modify the code from class to test the case where only one die is fair, while the other die has a 17.5% chance of rolling a 6 and a 16.5% chance for each of the other numbers. Would this be enough to flip the odds and make it a winning wager to bet on getting at least one double six with 24 rolls?
+
+```{r}
+set.seed(999)
+rollDiefair = function() {
+  # 1. Pick a space of possible samples (domain).
+  domain = 1:6
+  
+  # 2. Randomly sample in that space using a probability distribution.
+  value = sample(1:6, 1)
+  return(value)
+}
+
+rollDieBiased = function() {
+  domain = 1:6
+  probs = c(rep(0.165, 5), 0.175)
+  value = sample(1:6, 1, prob=probs)
+  return(value)
+}
+
+# set up function for Monte Carlo experiment to answer Pascal's double sixes question
+doubleSixProb = function(numTrials) {
+  numwins = 0
+  for (i in 1:numTrials) {
+    # 2. Randomly sample in that space using a probability distribution.
+    for (j in 1:24) {
+      d1 = rollDiefair()
+      d2 = rollDieBiased()
+      
+      # 3. Perform defined operations on the random samples.
+      if (d1+d2 == 12) {
+        # 4. Aggregate the data.
+        numwins = numwins + 1
+        break
+      }
+    }
+  }
+  # 4. Aggregate the data.
+  percent = numwins/numTrials
+  return(percent)
+}
+
+# run simulation 10,000 times
+doubleSixProb(10000)
+```
+Because the probability is > 50% ( about 51.43%) it's a winning wager to bet on getting at least 1 double six in 24 rolls because you have a slightly higher chance of getting at least one than of not getting one.
+
+#### **Interest Rate Modeling (20 points)**
+
+Suppose an investor wants to simulate the potential future values of an investment with compounding interest. Set up a Monte Carlo simulation where the annual return on the investment is normally distributed with a mean of 6% and a standard deviation of 10%. Simulate the investment's value after 10 years if the initial amount is \$10,000. What is the probability that the investment will be worth more than \$20,000 after 10 years?
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+```{r}
+set.seed(123)  
+initial_amount <- 10000  
+annual_mean <- 0.06      
+annual_sd <- 0.10       
+years <- 10           
+num_simulations <- 100000
+threshold <- 20000  #value to exceed
+
+
+simulate_investment <- function() {
+  # gen 10 random ann returns from normal distribution
+  annual_returns <- rnorm(years, mean = annual_mean, sd = annual_sd)
+  #compounded value after 10 years
+  final_value <- initial_amount * prod(1 + annual_returns)
+  return(final_value)
+}
+
+#run
+results <- replicate(num_simulations, simulate_investment())
+
+#prob exceed threshold
+probability <- mean(results > threshold)
+
+# display results
+print(paste("Probability that the investment exceeds $", threshold, "after", years," years is:", probability))
+```
+
+#### **Project Management (35 points total)** Describe distribution in own words. Comment on histogram, don't just plot.
+
+You are tasked with estimating the total duration of a four-phase project where each phase has its own time estimate and dependencies on previous phases. Your task is to use a Monte Carlo simulation to estimate the likely completion time of the project based on the following information:
+
+-   **Phase 1**: Expected to take between 3 and 5 weeks, with an equal chance for any duration in this range (uniform distribution).
+
+-   **Phase 2**:
+
+    -   If Phase 1 finishes in less than 30 days, this phase will take exactly 1 week.
+
+    -   If Phase 1 takes 30 days or more, Phase 2 will take 2 weeks.
+
+-   **Phase 3**: Expected to take around 3 weeks with some variability, modeled as a normal distribution with a mean of 3 weeks and a standard deviation of 2 days.
+
+-   **Phase 4**: This final phase will take between one quarter and one third of the combined time of Phases 1, 2, and 3, with an equal probability within this range.
+#Don't just report at end, for every iteration, save value from that, 
+Run a Monte Carlo simulation with 1,000 trials to estimate the likely total duration of the project and save the trial results in a vector (length = 1,000, values = estimate from each trial). Answer the following questions:
+
+1.  What is the average completion time across all simulations? (10 points)
+
+  10.84 weeks
+
+2.  What is the probability that the project will take longer than 12 weeks to complete? (10 points)
+  
+  30.7%
+
+3.  Plot a histogram of the completion times for all 1,000 simulations and describe the distribution in your own words. (15 points)
+
+  The distribution has 2 relative maxima/peaks (looks like a bimodal distribution) around the 10 and the 12.5 week mark, with probability densities that look relatively normally distributed around both, with more falling around the 10-week mode. Either takes 10 or 12 weeks, not around 11 weeks.
+  
+```{r, Project Management}
+set.seed(123)
+num_trials <- 1000
+
+# Phase 1: uniform distribution (3-5 weeks)
+phase_1_density <- density(runif(10000, min = 3, max = 5))
+#runif(1,3,5)
+
+# Phase 3: norm distribution (mean = 3 weeks, sd = 2 days)
+phase_3_density <- density(rnorm(10000, mean = 3, sd = 2 / 7))
+
+#sim a single trial
+simulate_project_duration <- function() {
+  # Phase 1: samp from phase 1 density
+  phase_1_duration <- sample(phase_1_density$x, 1, prob = phase_1_density$y)
+  
+  # Phase 2: depends on phase 1
+  if (phase_1_duration < 30 / 7) {  # convert 30 days to weeks
+    phase_2_duration <- 1
+  } else {
+    phase_2_duration <- 2
+  }
+  
+  # Phase 3: samp from phase 3 density
+  phase_3_duration <- sample(phase_3_density$x, 1, prob = phase_3_density$y)
+  
+  # Phase 4: fraction of combined time of all phases
+  combined_time <- phase_1_duration + phase_2_duration + phase_3_duration
+  phase_4_duration <- runif(1, min = combined_time / 4, max = combined_time / 3)
+  
+  # Total duration
+  total_duration <- phase_1_duration + phase_2_duration + phase_3_duration + phase_4_duration
+  return(total_duration)
+}
+
+# Run
+project_durations <- replicate(num_trials, simulate_project_duration())
+
+# Average completion time
+average_completion_time <- mean(project_durations)
+
+# Probability of taking over 12 weeks
+probability_over_12 <- mean(project_durations > 12)
+
+# histogram with density overlay
+hist(project_durations, breaks = 30, probability = TRUE, col = "skyblue", 
+     main = "Histogram of Project Completion Times", xlab = "Completion Time (weeks)")
+lines(density(project_durations), col = "red", lwd = 2)
+abline(v = average_completion_time, col = "blue", lty = 2, lwd = 2)
+
+#annotations for prettiness
+text(average_completion_time, 0.02, paste("Mean =", round(average_completion_time, 2)), col = "blue", pos = 4)
+text(15, 0.01, paste("P(T > 12) =", round(probability_over_12, 2)), col = "red", pos = 4)
+
+# output results
+print(paste("Average Completion Time:", round(average_completion_time, 2), "weeks"))
+print(paste("Probability of Completion > 12 weeks:", round(probability_over_12 * 100, 2), "%"))
+```
+#phase_4_min = (phase_1_time + phase_2_time + phase_3_time)/4
+
+prob over 12 weeks = mean(total_times > 12)
+
+#### Precipitation (30 points)
+
+Homework3_data.csv, sourced from <https://wrcc.dri.edu/cgi-bin/cliMAIN.pl?sc1770>, contains monthly total precipitation values recorded at Clemson University since 1896. Use this data to write a function to predict precipitation values for each month based on the distribution of historical rainfall for that month (hint: use the density function we used in class). Using your new function, set up a Monte Carlo simulation to find the probability that more than one quarter of the annual rainfall will come from a single month. 
+
+predict_monthly_precip = function(month) {
+  dens = density(month, na.rm = T)
+  sample(dens$x, size = 1, prob = dens$y)
+}
+
+#subset to montly data only 
+monthly_data = data[,2:13]
+predict_precip = function(){
+  
+
+predict_precip = function(){
+ monthly_values = apply(monthly_data, 2, predict_monthly_precip)
+ return(monthly_values)
+}
+
+precip_monte_carlo = function(numTrials)a {
+  count = 0 
+  
+  for (trial in 1:numTrials) {
+  precip = predict()
+}
+}
+
+#note: we're treating all months as independent, but
+```{r}
+data <- read.csv("C://Users//sgtur//OneDrive - Clemson University//R - Fall 2024//ECON8600//Datasets//Homework3_data.csv", header = TRUE)
+
+library(lubridate)
+library(tidyr)
+library(dplyr)
+
+
+data_long <- data %>%
+  pivot_longer(cols = JAN:DEC,
+               names_to = "Month",
+               values_to = "Precipitation") %>%
+    select(-YEAR.S.)
+data_long$Month <- match(data_long$Month, toupper(month.abb))
+
+data_long <- data_long %>%
+  filter(!is.na(Precipitation))
+head(data_long)
+
+#Sample precipitation for given month
+
+sample_monthly_precipitation <- function(month, n_samples, data_long) {
+  historical_values <- data_long$Precipitation[data_long$Month== month]
+  #Gen dens distribution
+  dens <- density(historical_values)
+  
+  sampled_values <- sample(dens$x, size = n_samples, prob = dens$y, replace = TRUE)
+  return(sampled_values)
+}
+
+#monte carlo simulation
+
+rainfall_simulation <- function(num_trials, data_long) {
+  count_exceed <- 0
+  
+  for (trial in 1:num_trials) {
+    #simulate for each month
+    simulated_annual_rainfall <- sapply(1:12, function(month) {
+      mean(sample_monthly_precipitation(month, 1, data_long))
+    })
+    annual_total <- sum(simulated_annual_rainfall)
+#check if any month > .25(annual_total)
+    if (max(simulated_annual_rainfall) > 0.25 * annual_total) {
+      count_exceed <- count_exceed +1
+    }
+  }
+#return prob
+  return(count_exceed/num_trials)
+}
+
+#run
+
+num_trials <- 1000
+result <- rainfall_simulation(num_trials, data_long)
+print(paste("Probability that more than 25% of annual rainfall comes from a single month:", result))
+```
+```{r} 
+install.packages("usethis", repos = "https://cloud.r-project.org")
+```
