@@ -1,20 +1,10 @@
----
-output:
-  word_document: default
-  html_document: default
----
-## Econ 8600 - Homework 3
-
-#### Due EOD 11/19/24
-
 #### {Sarah Grace Turner}
 
 
-#### **Pascal's double sixes with a weighted die (15 points)**
+#### **Pascal's double sixes with a weighted die**
 
-Modify the code from class to test the case where only one die is fair, while the other die has a 17.5% chance of rolling a 6 and a 16.5% chance for each of the other numbers. Would this be enough to flip the odds and make it a winning wager to bet on getting at least one double six with 24 rolls?
+# Modify the code from class to test the case where only one die is fair, while the other die has a 17.5% chance of rolling a 6 and a 16.5% chance for each of the other numbers. Would this be enough to flip the odds and make it a winning wager to bet on getting at least one double six with 24 rolls?
 
-```{r}
 set.seed(999)
 rollDiefair = function() {
   # 1. Pick a space of possible samples (domain).
@@ -32,7 +22,7 @@ rollDieBiased = function() {
   return(value)
 }
 
-# set up function for Monte Carlo experiment to answer Pascal's double sixes question
+# Set up function for Monte Carlo experiment to answer Pascal's double sixes question
 doubleSixProb = function(numTrials) {
   numwins = 0
   for (i in 1:numTrials) {
@@ -54,16 +44,15 @@ doubleSixProb = function(numTrials) {
   return(percent)
 }
 
-# run simulation 10,000 times
+# 5. Run the simulation 10,000 times
 doubleSixProb(10000)
-```
-Because the probability is > 50% ( about 51.43%) it's a winning wager to bet on getting at least 1 double six in 24 rolls because you have a slightly higher chance of getting at least one than of not getting one.
 
-#### **Interest Rate Modeling (20 points)**
+# Conclusions: Because the probability is > 50% ( about 51.43%) it's a winning wager to bet on getting at least 1 double six in 24 rolls because you have a slightly higher chance of getting at least one than of not getting one.
 
-Suppose an investor wants to simulate the potential future values of an investment with compounding interest. Set up a Monte Carlo simulation where the annual return on the investment is normally distributed with a mean of 6% and a standard deviation of 10%. Simulate the investment's value after 10 years if the initial amount is \$10,000. What is the probability that the investment will be worth more than \$20,000 after 10 years
+#### **Interest Rate Modeling**
 
-```{r}
+#Suppose an investor wants to simulate the potential future values of an investment with compounding interest. Set up a Monte Carlo simulation where the annual return on the investment is normally distributed with a mean of 6% and a standard deviation of 10%. Simulate the investment's value after 10 years if the initial amount is \$10,000. What is the probability that the investment will be worth more than \$20,000 after 10 years
+
 set.seed(123)  
 initial_amount <- 10000  
 annual_mean <- 0.06      
@@ -81,47 +70,47 @@ simulate_investment <- function() {
   return(final_value)
 }
 
-#run
+#Run
 results <- replicate(num_simulations, simulate_investment())
 
-#prob exceed threshold
+# Probability exceed threshold
 probability <- mean(results > threshold)
 
-# display results
+# Display results. Reproducible for many different thresholds
 print(paste("Probability that the investment exceeds $", threshold, "after", years," years is:", probability))
-```
 
-#### **Project Management (35 points total)** Describe distribution in own words. Comment on histogram, don't just plot.
 
-You are tasked with estimating the total duration of a four-phase project where each phase has its own time estimate and dependencies on previous phases. Your task is to use a Monte Carlo simulation to estimate the likely completion time of the project based on the following information:
+#### **Project Management ** Describe distribution in own words. Comment on histogram
+# Estimate the total duration of a four-phase project where each phase has its own time estimate and dependencies on previous phases. 
+# Use a Monte Carlo simulation to estimate the likely completion time of the project based on the following information:
 
--   **Phase 1**: Expected to take between 3 and 5 weeks, with an equal chance for any duration in this range (uniform distribution).
+#   **Phase 1**: Expected to take between 3 and 5 weeks, with an equal chance for any duration in this range (uniform distribution).
 
--   **Phase 2**:
+#   **Phase 2**:
 
-    -   If Phase 1 finishes in less than 30 days, this phase will take exactly 1 week.
+   # -   If Phase 1 finishes in less than 30 days, this phase will take exactly 1 week.
 
-    -   If Phase 1 takes 30 days or more, Phase 2 will take 2 weeks.
+   # -   If Phase 1 takes 30 days or more, Phase 2 will take 2 weeks.
 
--   **Phase 3**: Expected to take around 3 weeks with some variability, modeled as a normal distribution with a mean of 3 weeks and a standard deviation of 2 days.
+#   **Phase 3**: Expected to take around 3 weeks with some variability, modeled as a normal distribution with a mean of 3 weeks and a standard deviation of 2 days.
 
--   **Phase 4**: This final phase will take between one quarter and one third of the combined time of Phases 1, 2, and 3, with an equal probability within this range.
+#   **Phase 4**: This final phase will take between one quarter and one third of the combined time of Phases 1, 2, and 3, with an equal probability within this range.
 #Don't just report at end, for every iteration, save value from that, 
-Run a Monte Carlo simulation with 1,000 trials to estimate the likely total duration of the project and save the trial results in a vector (length = 1,000, values = estimate from each trial). Answer the following questions:
+#Run a Monte Carlo simulation with 1,000 trials to estimate the likely total duration of the project and save the trial results in a vector (length = 1,000, values = estimate from each trial). Answer the following questions:
 
-1.  What is the average completion time across all simulations? (10 points)
+#1.  What is the average completion time across all simulations? (10 points)
 
-  10.84 weeks
+  # 10.84 weeks
 
-2.  What is the probability that the project will take longer than 12 weeks to complete? (10 points)
+#2.  What is the probability that the project will take longer than 12 weeks to complete? (10 points)
   
-  30.7%
+  # 30.7%
 
-3.  Plot a histogram of the completion times for all 1,000 simulations and describe the distribution in your own words. (15 points)
+#3.  Plot a histogram of the completion times for all 1,000 simulations and describe the distribution in your own words. (15 points)
 
-  The distribution has 2 relative maxima/peaks (looks like a bimodal distribution) around the 10 and the 12.5 week mark, with probability densities that look relatively normally distributed around both, with more falling around the 10-week mode. Either takes 10 or 12 weeks, not around 11 weeks.
+  # The distribution has 2 relative maxima/peaks (looks like a bimodal distribution) around the 10 and the 12.5 week mark, with probability densities that look relatively normally distributed around both, with more falling around the 10-week mode. Either takes 10 or 12 weeks, not around 11 weeks.
   
-```{r, Project Management}
+# Project Management
 set.seed(123)
 num_trials <- 1000
 
@@ -178,14 +167,14 @@ text(15, 0.01, paste("P(T > 12) =", round(probability_over_12, 2)), col = "red",
 # output results
 print(paste("Average Completion Time:", round(average_completion_time, 2), "weeks"))
 print(paste("Probability of Completion > 12 weeks:", round(probability_over_12 * 100, 2), "%"))
-```
+
 #phase_4_min = (phase_1_time + phase_2_time + phase_3_time)/4
 
 prob over 12 weeks = mean(total_times > 12)
 
-#### Precipitation (30 points)
+#### Precipitation
 
-Homework3_data.csv, sourced from <https://wrcc.dri.edu/cgi-bin/cliMAIN.pl?sc1770>, contains monthly total precipitation values recorded at Clemson University since 1896. Use this data to write a function to predict precipitation values for each month based on the distribution of historical rainfall for that month (hint: use the density function we used in class). Using your new function, set up a Monte Carlo simulation to find the probability that more than one quarter of the annual rainfall will come from a single month. 
+#data sourced from <https://wrcc.dri.edu/cgi-bin/cliMAIN.pl?sc1770>, contains monthly total precipitation values recorded at Clemson University since 1896. Use this data to write a function to predict precipitation values for each month based on the distribution of historical rainfall for that month (hint: use the density function we used in class). Using your new function, set up a Monte Carlo simulation to find the probability that more than one quarter of the annual rainfall will come from a single month. 
 
 predict_monthly_precip = function(month) {
   dens = density(month, na.rm = T)
@@ -210,7 +199,7 @@ precip_monte_carlo = function(numTrials)a {
 }
 }
 
-#note: we're treating all months as independent, but
+#note: we're treating all months as independent, but precipitation isn't truly independent 
 ```{r}
 data <- read.csv("C://Users//sgtur//OneDrive - Clemson University//R - Fall 2024//ECON8600//Datasets//Homework3_data.csv", header = TRUE)
 
@@ -266,8 +255,4 @@ rainfall_simulation <- function(num_trials, data_long) {
 num_trials <- 1000
 result <- rainfall_simulation(num_trials, data_long)
 print(paste("Probability that more than 25% of annual rainfall comes from a single month:", result))
-```
-```{r} 
-install.packages("usethis", repos = "https://cloud.r-project.org")
 
-```
